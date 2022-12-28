@@ -6,7 +6,7 @@
  * @copyright   2011 Josh Lockhart
  * @link        http://www.slimframework.com
  * @license     http://www.slimframework.com/license
- * @version     2.4.2
+ * @version     2.0.0
  * @package     Slim
  *
  * MIT LICENSE
@@ -66,9 +66,7 @@ class PrettyExceptions extends \Slim\Middleware
         try {
             $this->next->call();
         } catch (\Exception $e) {
-            $log = $this->app->getLog(); // Force Slim to append log to env if not already
             $env = $this->app->environment();
-            $env['slim.log'] = $log;
             $env['slim.log']->error($e);
             $this->app->contentType('text/html');
             $this->app->response()->status(500);
@@ -89,11 +87,10 @@ class PrettyExceptions extends \Slim\Middleware
         $message = $exception->getMessage();
         $file = $exception->getFile();
         $line = $exception->getLine();
-        $trace = str_replace(array('#', "\n"), array('<div>#', '</div>'), $exception->getTraceAsString());
+        $trace = $exception->getTraceAsString();
         $html = sprintf('<h1>%s</h1>', $title);
         $html .= '<p>The application could not run because of the following error:</p>';
         $html .= '<h2>Details</h2>';
-        $html .= sprintf('<div><strong>Type:</strong> %s</div>', get_class($exception));
         if ($code) {
             $html .= sprintf('<div><strong>Code:</strong> %s</div>', $code);
         }

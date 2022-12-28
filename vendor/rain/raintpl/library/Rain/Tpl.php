@@ -230,10 +230,12 @@ class Tpl {
         // lock the file
         if (flock($fp, LOCK_SH)) {
 
+            
             // save the filepath in the info
             $this->templateInfo['template_filepath'] = $templateFilepath;
 
-            // read the file			
+            // read the file
+            		
             $this->templateInfo['code'] = $code = fread($fp, filesize($templateFilepath));
 
             // xml substitution

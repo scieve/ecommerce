@@ -6,7 +6,7 @@
  * @copyright   2011 Josh Lockhart
  * @link        http://www.slimframework.com
  * @license     http://www.slimframework.com/license
- * @version     2.4.2
+ * @version     2.0.0
  * @package     Slim
  *
  * MIT LICENSE
@@ -91,22 +91,15 @@ class Route
     protected $middleware = array();
 
     /**
-     * @var bool Whether or not this route should be matched in a case-sensitive manner
-     */
-    protected $caseSensitive;
-
-    /**
      * Constructor
-     * @param string $pattern The URL pattern (e.g. "/books/:id")
-     * @param mixed $callable Anything that returns TRUE for is_callable()
-     * @param bool $caseSensitive Whether or not this route should be matched in a case-sensitive manner
+     * @param string $pattern  The URL pattern (e.g. "/books/:id")
+     * @param mixed  $callable Anything that returns TRUE for is_callable()
      */
-    public function __construct($pattern, $callable, $caseSensitive = true)
+    public function __construct($pattern, $callable)
     {
         $this->setPattern($pattern);
         $this->setCallable($callable);
         $this->setConditions(self::getDefaultConditions());
-        $this->caseSensitive = $caseSensitive;
     }
 
     /**
@@ -157,27 +150,9 @@ class Route
     /**
      * Set route callable
      * @param  mixed $callable
-     * @throws \InvalidArgumentException If argument is not callable
      */
     public function setCallable($callable)
     {
-        $matches = array();
-        if (is_string($callable) && preg_match('!^([^\:]+)\:([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)$!', $callable, $matches)) {
-            $class = $matches[1];
-            $method = $matches[2];
-            $callable = function() use ($class, $method) {
-                static $obj = null;
-                if ($obj === null) {
-                    $obj = new $class;
-                }
-                return call_user_func_array(array($obj, $method), func_get_args());
-            };
-        }
-
-        if (!is_callable($callable)) {
-            throw new \InvalidArgumentException('Route callable must be callable');
-        }
-
         $this->callable = $callable;
     }
 
@@ -214,7 +189,7 @@ class Route
      */
     public function setName($name)
     {
-        $this->name = (string)$name;
+        $this->name = (string) $name;
     }
 
     /**
@@ -237,7 +212,7 @@ class Route
 
     /**
      * Get route parameter value
-     * @param  string $index Name of URL parameter
+     * @param  string                    $index     Name of URL parameter
      * @return string
      * @throws \InvalidArgumentException If route parameter does not exist at index
      */
@@ -252,8 +227,8 @@ class Route
 
     /**
      * Set route parameter value
-     * @param  string $index Name of URL parameter
-     * @param  mixed $value The new parameter value
+     * @param  string                    $index     Name of URL parameter
+     * @param  mixed                     $value     The new parameter value
      * @throws \InvalidArgumentException If route parameter does not exist at index
      */
     public function setParam($index, $value)
@@ -288,9 +263,6 @@ class Route
     public function appendHttpMethods()
     {
         $args = func_get_args();
-        if(count($args) && is_array($args[0])){
-            $args = $args[0];
-        }
         $this->methods = array_merge($this->methods, $args);
     }
 
@@ -301,9 +273,6 @@ class Route
     public function via()
     {
         $args = func_get_args();
-        if(count($args) && is_array($args[0])){
-            $args = $args[0];
-        }
         $this->methods = array_merge($this->methods, $args);
 
         return $this;
@@ -311,7 +280,6 @@ class Route
 
     /**
      * Detect support for an HTTP method
-     * @param  string $method
      * @return bool
      */
     public function supportsHttpMethod($method)
@@ -335,23 +303,19 @@ class Route
      * If the method argument `is_callable` (including callable arrays!),
      * we directly append the argument to `$this->middleware`. Else, we
      * assume the argument is an array of callables and merge the array
-     * with `$this->middleware`.  Each middleware is checked for is_callable()
-     * and an InvalidArgumentException is thrown immediately if it isn't.
+     * with `$this->middleware`. Even if non-callables are included in the
+     * argument array, we still merge them; we lazily check each item
+     * against `is_callable` during Router::dispatch().
      *
      * @param  Callable|array[Callable]
      * @return \Slim\Route
-     * @throws \InvalidArgumentException If argument is not callable or not an array of callables.
+     * @throws \InvalidArgumentException If argument is not callable or not an array
      */
     public function setMiddleware($middleware)
     {
         if (is_callable($middleware)) {
             $this->middleware[] = $middleware;
         } elseif (is_array($middleware)) {
-            foreach ($middleware as $callable) {
-                if (!is_callable($callable)) {
-                    throw new \InvalidArgumentException('All Route middleware must be callable');
-                }
-            }
             $this->middleware = array_merge($this->middleware, $middleware);
         } else {
             throw new \InvalidArgumentException('Route middleware must be callable or an array of callables');
@@ -374,28 +338,19 @@ class Route
     public function matches($resourceUri)
     {
         //Convert URL params into regex patterns, construct a regex for this route, init params
-        $patternAsRegex = preg_replace_callback(
-            '#:([\w]+)\+?#',
-            array($this, 'matchesCallback'),
-            str_replace(')', ')?', (string)$this->pattern)
-        );
+        $patternAsRegex = preg_replace_callback('#:([\w]+)\+?#', array($this, 'matchesCallback'),
+            str_replace(')', ')?', (string) $this->pattern));
         if (substr($this->pattern, -1) === '/') {
             $patternAsRegex .= '?';
         }
 
-        $regex = '#^' . $patternAsRegex . '$#';
-
-        if ($this->caseSensitive === false) {
-            $regex .= 'i';
-        }
-
         //Cache URL params' names and values if this route matches the current HTTP request
-        if (!preg_match($regex, $resourceUri, $paramValues)) {
+        if (!preg_match('#^' . $patternAsRegex . '$#', $resourceUri, $paramValues)) {
             return false;
         }
         foreach ($this->paramNames as $name) {
             if (isset($paramValues[$name])) {
-                if (isset($this->paramNamesPath[$name])) {
+                if (isset($this->paramNamesPath[ $name ])) {
                     $this->params[$name] = explode('/', urldecode($paramValues[$name]));
                 } else {
                     $this->params[$name] = urldecode($paramValues[$name]);
@@ -408,17 +363,17 @@ class Route
 
     /**
      * Convert a URL parameter (e.g. ":id", ":id+") into a regular expression
-     * @param  array $m URL parameters
-     * @return string       Regular expression for URL parameter
+     * @param  array    URL parameters
+     * @return string   Regular expression for URL parameter
      */
     protected function matchesCallback($m)
     {
         $this->paramNames[] = $m[1];
-        if (isset($this->conditions[$m[1]])) {
-            return '(?P<' . $m[1] . '>' . $this->conditions[$m[1]] . ')';
+        if (isset($this->conditions[ $m[1] ])) {
+            return '(?P<' . $m[1] . '>' . $this->conditions[ $m[1] ] . ')';
         }
         if (substr($m[0], -1) === '+') {
-            $this->paramNamesPath[$m[1]] = 1;
+            $this->paramNamesPath[ $m[1] ] = 1;
 
             return '(?P<' . $m[1] . '>.+)';
         }
@@ -428,7 +383,7 @@ class Route
 
     /**
      * Set route name
-     * @param  string $name The name of the route
+     * @param  string     $name The name of the route
      * @return \Slim\Route
      */
     public function name($name)
@@ -440,7 +395,7 @@ class Route
 
     /**
      * Merge route conditions
-     * @param  array $conditions Key-value array of URL parameter conditions
+     * @param  array      $conditions Key-value array of URL parameter conditions
      * @return \Slim\Route
      */
     public function conditions(array $conditions)
@@ -448,24 +403,5 @@ class Route
         $this->conditions = array_merge($this->conditions, $conditions);
 
         return $this;
-    }
-
-    /**
-     * Dispatch route
-     *
-     * This method invokes the route object's callable. If middleware is
-     * registered for the route, each callable middleware is invoked in
-     * the order specified.
-     *
-     * @return bool
-     */
-    public function dispatch()
-    {
-        foreach ($this->middleware as $mw) {
-            call_user_func_array($mw, array($this));
-        }
-
-        $return = call_user_func_array($this->getCallable(), array_values($this->getParams()));
-        return ($return === false) ? false : true;
     }
 }

@@ -26,15 +26,13 @@ $app = new \Slim\Slim();
  *
  * Here we define several Slim application routes that respond
  * to appropriate HTTP request methods. In this example, the second
- * argument for `Slim::get`, `Slim::post`, `Slim::put`, `Slim::patch`, and `Slim::delete`
+ * argument for `Slim::get`, `Slim::post`, `Slim::put`, and `Slim::delete`
  * is an anonymous function.
  */
 
 // GET route
-$app->get(
-    '/',
-    function () {
-        $template = <<<EOT
+$app->get('/', function () {
+    $template = <<<EOT
 <!DOCTYPE html>
     <html>
         <head>
@@ -90,7 +88,7 @@ $app->get(
             <h1>Welcome to Slim!</h1>
             <p>
                 Congratulations! Your Slim application is running. If this is
-                your first time using Slim, start with this <a href="http://docs.slimframework.com/#Hello-World" target="_blank">"Hello World" Tutorial</a>.
+                your first time using Slim, start with this <a href="http://www.slimframework.com/learn" target="_blank">"Hello World" Tutorial</a>.
             </p>
             <section>
                 <h2>Get Started</h2>
@@ -127,38 +125,23 @@ $app->get(
         </body>
     </html>
 EOT;
-        echo $template;
-    }
-);
+    echo $template;
+});
 
 // POST route
-$app->post(
-    '/post',
-    function () {
-        echo 'This is a POST route';
-    }
-);
+$app->post('/post', function () {
+    echo 'This is a POST route';
+});
 
 // PUT route
-$app->put(
-    '/put',
-    function () {
-        echo 'This is a PUT route';
-    }
-);
-
-// PATCH route
-$app->patch('/patch', function () {
-    echo 'This is a PATCH route';
+$app->put('/put', function () {
+    echo 'This is a PUT route';
 });
 
 // DELETE route
-$app->delete(
-    '/delete',
-    function () {
-        echo 'This is a DELETE route';
-    }
-);
+$app->delete('/delete', function () {
+    echo 'This is a DELETE route';
+});
 
 /**
  * Step 4: Run the Slim application
